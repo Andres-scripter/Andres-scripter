@@ -1,0 +1,3 @@
+- 👋 Hi, I’m @Andres-scripter
+- 👀 I’m interested in da hood scripts
+- How to reach me:Discord user .sil9nce
