@@ -1,0 +1,252 @@
+-- make sure y'all https://discord.gg/BkTebksHgr for the best scripts
+local void = if true then fireserver
+    (in MouseY, -3) playerposition
+    vector3.new(0, 10, 0)     -- repeat but with x 
+--[[local void = if true then fireserver
+    (in MouseX, -3) playerposition
+    vector3.new(0, 0, 10)]]
+
+-- then add ur hooks too silent aim 
+-- Silent aim Yes this got 5x stars back then during the ancient days 
+if getgenv().Stars then return getgenv().Stars end
+
+-- vars
+local Workspace = game.GetService(game, "Workspace")
+local Heartbeat = game.GetService(game, "RunService").Heartbeat
+local GuiService = game.GetService(game, "GuiService")
+local Players = game.GetService(game, "Players")
+local LocalPlayer = Players.LocalPlayer
+local CurrentCamera = game:GetService("Workspace").CurrentCamera
+local Mouse = LocalPlayer.GetMouse(LocalPlayer)
+
+-- the silent aim vars / table 
+getgenv().Stars = {
+    SilentAimEnabled = true,
+    ShowFOV = true,
+    VisibleCheck = true,
+    TeamCheck = true,
+    HitPart = {"Head","LowerTorso","UpperTorso","HumanoidRootPart","LeftLowerArm","RightLowerArm","LeftUpperArm","RightUpperArm","LeftLowerLeg","LeftUpperLeg","RightLowerLeg","RightUpperLeg"},
+    FOV = 5.1,
+    HitChance = 100,
+    Selected = LocalPlayer,
+    BlacklistedTeams = {
+        {
+            Team = LocalPlayer.Team,
+            TeamColor = LocalPlayer.TeamColor,
+        },
+    },
+    BlacklistedPlayers = {LocalPlayer},
+    WhitelistedPUIDs = {91318356},
+}
+
+--  FOV
+local circle = Drawing.new("Circle")
+function Stars.updateCircle()
+    if (circle) then
+        -- Circe 
+        circle.Transparency = 1
+        circle.Visible = Stars["ShowFOV"]
+        circle.Thickness = 2
+        circle.Color = Color3.fromRGB(0, 0, 0)
+        circle.NumSides = 12
+        circle.Radius = (Stars["FOV"] * 6) / 2
+        circle.Filled = false
+        circle.Position = Vector2.new(Mouse.X, Mouse.Y + (GuiService.GetGuiInset(GuiService).Y))
+
+        -- Return circle
+        return circle
+    end
+end
+
+--  Custom Functions
+setreadonly(math, false); math.chance = function(percentage) local percentage = math.floor(percentage); local chance = math.floor(Random.new().NextNumber(Random.new(), 0, 1) * 100)/100; return chance <= percentage/100 end; setreadonly(math, true);
+setreadonly(table, false); table.loopforeach = function(tbl, func) for index, value in pairs(tbl) do if type(value) == 'table' then table.loopforeach(value, func); elseif type(value) == 'function' then table.loopforeach(debug.getupvalues(value)); else func(index, value); end; end; end; setreadonly(table, true);
+
+--  Customisable Checking Functions: Is a part visible
+function Stars.isPartVisible(Part, PartDescendant)
+    --  Vars
+    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded.Wait(LocalPlayer.CharacterAdded)
+    local Origin = CurrentCamera.CFrame.Position
+    local _, OnScreen = CurrentCamera.WorldToViewportPoint(CurrentCamera, Part.Position)
+
+    --  If Part is on the screen
+    if (OnScreen) then
+        -- Vars: Calculating if is visible
+        local newRay = Ray.new(Origin, Part.Position - Origin)
+        local PartHit, _ = Workspace.FindPartOnRayWithIgnoreList(Workspace, newRay, {Character, CurrentCamera})
+        local Visible = (not PartHit or PartHit.IsDescendantOf(PartHit, PartDescendant))
+
+        --  Return
+        return Visible
+    end
+
+    --  Return
+    return false
+end
+
+--  Check teams
+function Stars.checkTeam(targetPlayerA, targetPlayerB)
+    --  If player is not on your team
+    if (targetPlayerA.Team ~= targetPlayerB.Team) then
+
+        --  Check if team is blacklisted
+        for i = 1, #Stars.BlacklistedTeams do
+            local v = Stars.BlacklistedTeams
+
+            if (targetPlayerA.Team ~= v.Team and targetPlayerA.TeamColor ~= v.TeamColor) then
+                return true
+            end
+        end
+    end
+
+    --  Return
+    return false
+end
+
+--  Check if player is blacklisted
+function Stars.checkPlayer(targetPlayer)
+    for i = 1, #Stars.BlacklistedPlayers do
+        local v = Stars.BlacklistedPlayers[i]
+
+        if (v ~= targetPlayer) then
+            return true
+        end
+    end
+
+    --  Return
+    return false
+end
+
+--  Check if player is whitelisted
+function Stars.checkWhitelisted(targetPlayer)
+    for i = 1, #Stars.WhitelistedPUIDs do
+        local v = Stars.WhitelistedPUIDs[i]
+
+        if (targetPlayer.UserId == v) then
+            return true
+        end
+    end
+
+    --  Return
+    return false
+end
+
+--  Get the Direction, Normal and Material
+function Stars.findDirectionNormalMaterial(Origin, Destination, UnitMultiplier)
+    if (typeof(Origin) == "Vector3" and typeof(Destination) == "Vector3") then
+        --  Handling
+        if (not UnitMultiplier) then UnitMultiplier = 1 end
+
+        --  Vars
+        local Direction = (Destination - Origin).Unit * UnitMultiplier
+        local RaycastResult = Workspace.Raycast(Workspace, Origin, Direction)
+
+        if (RaycastResult ~= nil) then
+            local Normal = RaycastResult.Normal
+            local Material = RaycastResult.Material
+
+            return Direction, Normal, Material
+        end
+    end
+
+    --  Return
+    return nil
+end
+
+--  Check if silent aim can used
+function Stars.checkSilentAim()
+    return (rawget(Stars, "SilentAimEnabled") == true and rawget(Stars, "Selected") ~= LocalPlayer)
+end
+
+--  Silent Aim Function
+function Stars.getClosestPlayerToCursor()
+    --  Vars
+    local ClosestPlayer = nil
+    local Chance = math.chance(Stars["HitChance"])
+    local ShortestDistance = 1/0
+
+    --  Chance
+    if (not Chance) then 
+        Stars["Selected"] = (Chance and LocalPlayer or LocalPlayer)
+        
+        return (Chance and LocalPlayer or LocalPlayer)
+    end Loop through all players            -- theres a Error right here and i wont be fixing it
+    local AllPlayers = Players.GetPlayers(Players)
+    for i = 1, #AllPlayers do
+        local plr = AllPlayers[i]
+
+        if (not Stars.checkWhitelisted(plr) and Stars.checkPlayer(plr) and plr.Character and plr.Character.PrimaryPart and plr.Character.FindFirstChildWhichIsA(plr.Character, "Humanoid") and plr.Character.FindFirstChildWhichIsA(plr.Character, "Humanoid").Health > 0) then
+            --  Team Check
+            if (Stars["TeamCheck"] and not Stars.checkTeam(plr, LocalPlayer)) then break end
+
+            --  Vars
+            local PartPos, OnScreen = CurrentCamera.WorldToViewportPoint(CurrentCamera, plr.Character.PrimaryPart.Position)
+            local Magnitude = (Vector2.new(PartPos.X, PartPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+
+            -- Check if is in FOV
+            if (Magnitude < (Stars["FOV"] * 6 - 8)) and (Magnitude < ShortestDistance) then
+                --  Check if Visible
+                if (Stars["VisibleCheck"] and Stars.isPartVisible(plr.Character.PrimaryPart, plr.Character)) or (not Stars["VisibleCheck"]) then
+                    ClosestPlayer = plr
+                    ShortestDistance = Magnitude
+                end
+            end
+        end
+    end
+
+    --  End
+    Stars["Selected"] = (Chance and ClosestPlayer or LocalPlayer)
+    return (Chance and ClosestPlayer or LocalPlayer)
+end
+
+--  Heartbeat ng
+local HBFuncs = function()
+    Stars.updateCircle()
+    Stars.getClosestPlayerToCursor()
+end
+Heartbeat.Connect(Heartbeat, HBFuncs)
+
+return Stars
+
+--[[
+Examples:
+
+--// Namecall Version // --
+local mt = getrawmetatable(game)
+local backupindex = mt.__index
+local Stars = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/AnilisDev/DH-Silent-Aim/main/Namecall%20Version.lua"))()
+Stars["TeamCheck"] = false
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(...)
+    local args = {...}
+    local method = getnamecallmethod()
+    if method == "FireServer" then
+        if tostring(args[1]) == "RemoteNameHere" then
+            -- change args
+            return backupnamecall(unpack(args))
+        end
+    end
+    return backupnamecall(...)
+end)
+setreadonly(mt, true)
+
+-- // Index Version // --
+local mt = getrawmetatable(game)
+local backupindex = mt.__index
+local Stars = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/AnilisDev/DH-Silent-Aim/main/Index%20Version.lua"))()
+Stars["TeamCheck"] = false
+setreadonly(mt, false)
+
+mt.__index = newcclosure(function(t, k)
+    if t:IsA("Mouse") and (k == "Hit" or k == "Target") then
+        if Stars.checkSilentAim() then
+            local CPlayer = rawget(Stars, "Selected")
+            if CPlayer and CPlayer.Character and CPlayer.Character.FindFirstChild(CPlayer.Character, "Head") then
+                return (k == "Hit" and CPlayer.Character.Head.CFrame or CPlayer.Character.Head)
+            end
+        end
+    end
+    return backupindex(t, k)
+end)
+setreadonly(mt, true)
